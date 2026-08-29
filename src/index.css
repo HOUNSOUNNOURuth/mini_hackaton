@@ -1,0 +1,359 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap");
+
+:root {
+  /* Couleurs de marque CampusGo */
+  --color-ink: #10243e;
+  --color-primary: #1f4e79;
+  --color-primary-dark: #163a5c;
+  --color-green: #2e7d32;
+  --color-amber: #f2a93b; /* accent signature : rappelle la récompense des petites tâches */
+  --color-bg: #f5f8fb;
+  --color-surface: #ffffff;
+  --color-border: #e1e8ef;
+  --color-text: #142433;
+  --color-text-muted: #5b6b7a;
+  --color-danger: #c1432a;
+
+  --font-display: "Sora", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --shadow-card: 0 2px 10px rgba(16, 36, 62, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--color-ink);
+  margin: 0 0 8px;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform 0.06s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.field input,
+.field select {
+  font-family: var(--font-body);
+  padding: 11px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  background: var(--color-surface);
+}
+
+.field input:focus,
+.field select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.field.matricule input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+}
+
+.error-banner {
+  background: #fbeae5;
+  color: var(--color-danger);
+  border: 1px solid #f1c6b9;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- Écrans d'authentification ---------- */
+
+.auth-shell {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+}
+
+.auth-visual {
+  background: linear-gradient(160deg, var(--color-ink) 0%, var(--color-primary) 100%);
+  color: white;
+  padding: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-visual::after {
+  /* le "chemin en pointillés" : signature visuelle du guidage sur le campus */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(242, 169, 59, 0.55) 2px, transparent 2.5px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(115deg, transparent 40%, black 55%, transparent 75%);
+  opacity: 0.5;
+}
+
+.auth-visual-brand {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.auth-visual-pitch {
+  z-index: 1;
+  max-width: 380px;
+}
+
+.auth-visual-pitch h2 {
+  color: white;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.auth-visual-pitch p {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+}
+
+.auth-modules {
+  display: flex;
+  gap: 18px;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.auth-module-chip {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.auth-form-wrap {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-form-wrap h1 {
+  font-size: 26px;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+  .auth-visual {
+    display: none;
+  }
+}
+
+/* ---------- Application (après connexion) ---------- */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  min-height: 100%;
+}
+
+.sidebar {
+  background: var(--color-ink);
+  color: white;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-brand {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  padding: 0 8px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+}
+
+.sidebar-link.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+}
+
+.topbar {
+  height: 64px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: var(--color-surface);
+}
+
+.main-content {
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header .eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-green);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.module-card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.module-card .tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.loader-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
