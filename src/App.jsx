@@ -1,46 +1,47 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import PublicOnlyRoute from "./components/PublicOnlyRoute";
-import AppLayout from "./components/AppLayout";
+import { Routes, Route } from 'react-router-dom'
+import PublicOnlyRoute from './components/shared/PublicOnlyRoute'
+import ProtectedRoute from './components/shared/ProtectedRoute'
+import AppLayout from './components/layout/AppLayout'
 
-import SignUp from "./pages/auth/SignUp";
-import SignIn from "./pages/auth/SignIn";
-import Dashboard from "./pages/Dashboard";
-import RendezVousPage from "./pages/rendezvous/RendezVousPage";
-import GuidagePage from "./pages/guidage/GuidagePage";
-import EpreuvesPage from "./pages/epreuves/EpreuvesPage";
-import TachesPage from "./pages/taches/TachesPage";
-import NotFound from "./pages/NotFound";
+import SignIn from './pages/auth/SignIn'
+import SignUp from './pages/auth/SignUp'
+import Dashboard from './pages/Dashboard'
+import RendezVousPage from './pages/rendezvous/RendezVousPage'
+import GuidagePage from './pages/guidage/GuidagePage'
+import EpreuvesPage from './pages/epreuves/EpreuvesPage'
+import TachesPage from './pages/taches/TachesPage'
+import NotFound from './pages/NotFound'
+import MesCandidatures from './pages/taches/MesCandidatures'
+import MesTachesPubliees from './pages/taches/MesTachesPubliees'
+import ProfilPage from './pages/ProfilPage'
 
-export default function App() {
+
+function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          {/* Redirection racine : jamais d'accès direct sans passer par un compte */}
-          <Route path="/" element={<Navigate to="/connexion" replace />} />
+    <Routes>
+      {/* Routes publiques : accessibles seulement si NON connecté */}
+      <Route element={<PublicOnlyRoute />}>
+        <Route path="/login" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+      </Route>
 
-          {/* Pages accessibles uniquement si PAS connecté */}
-          <Route element={<PublicOnlyRoute />}>
-            <Route path="/inscription" element={<SignUp />} />
-            <Route path="/connexion" element={<SignIn />} />
-          </Route>
+      {/* Routes protégées : accessibles seulement si connecté */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/rendez-vous" element={<RendezVousPage />} />
+          <Route path="/guidage" element={<GuidagePage />} />
+          <Route path="/epreuves" element={<EpreuvesPage />} />
+          <Route path="/taches" element={<TachesPage />} />
+          <Route path="/taches/mes-candidatures" element={<MesCandidatures />} />
+          <Route path="/taches/mes-publications" element={<MesTachesPubliees />} />
+          <Route path="/profil" element={<ProfilPage />} />
+        </Route>
+      </Route>
 
-          {/* Tout le site est protégé : il faut un compte + être connecté */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/app" element={<AppLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="rendez-vous" element={<RendezVousPage />} />
-              <Route path="guidage" element={<GuidagePage />} />
-              <Route path="epreuves" element={<EpreuvesPage />} />
-              <Route path="taches" element={<TachesPage />} />
-            </Route>
-          </Route>
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
-  );
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  )
 }
+
+export default App

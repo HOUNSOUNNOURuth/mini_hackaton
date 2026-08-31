@@ -1,83 +1,98 @@
-// Edge Function Supabase : "payer-tache"
-//
-// Rôle : déclencher un paiement Money Fusion pour une tâche confirmée,
-// et calculer/enregistrer la commission de 10 % de CampusGo.
-// La clé API Money Fusion (MONEYFUSION_API_KEY) ne doit JAMAIS être exposée
-// côté frontend : elle vit uniquement dans les variables d'environnement
-// de cette fonction (Supabase Dashboard > Edge Functions > Secrets).
-//
-// Déploiement : supabase functions deploy payer-tache
-// Appel depuis le frontend : supabase.functions.invoke('payer-tache', { body: { tacheId } })
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const COMMISSION_TAUX = 0.10; // 10 %
+const MONEY_FUSION_API_URL = 'https://www.moneyfusion.net/api/v1/payment' // à ajuster selon la vraie doc Money Fusion
+const MONEY_FUSION_API_KEY = Deno.env.get('MONEY_FUSION_API_KEY')
+const COMMISSION_TAUX = 0.10
 
 Deno.serve(async (req) => {
   try {
-    const { tacheId } = await req.json();
+    const { tache_id } = await req.json()
 
+    // Client avec la clé de service : contourne les RLS pour cette opération serveur,
+    // mais toute la logique métier (qui a le droit de payer quoi) est vérifiée ci-dessous.
     const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")! // clé service, jamais la clé anon
-    );
+      Deno.env.get('SUPABASE_URL'),
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    )
 
-    // 1. Récupérer la tâche et son prix convenu.
+    // Identifie l'utilisateur appelant à partir de son JWT (envoyé automatiquement par supabase.functions.invoke)
+    const authHeader = req.headers.get('Authorization')
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL'),
+      Deno.env.get('SUPABASE_ANON_KEY'),
+      { global: { headers: { Authorization: authHeader } } }
+    )
+    const { data: { user } } = await supabaseClient.auth.getUser()
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Non authentifié' }), { status: 401 })
+    }
+
+    // Récupère la tâche et vérifie qu'elle est payable
     const { data: tache, error: tacheError } = await supabaseAdmin
-      .from("taches")
-      .select("*")
-      .eq("id", tacheId)
-      .single();
+      .from('taches')
+      .select('*')
+      .eq('id', tache_id)
+      .single()
 
     if (tacheError || !tache) {
-      return new Response(JSON.stringify({ error: "Tâche introuvable." }), { status: 404 });
+      return new Response(JSON.stringify({ error: 'Tâche introuvable' }), { status: 404 })
+    }
+    if (tache.demandeur_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Seul le demandeur peut payer cette tâche' }), { status: 403 })
+    }
+    if (tache.statut !== 'confirmee') {
+      return new Response(JSON.stringify({ error: 'La tâche doit être confirmée avant paiement' }), { status: 400 })
     }
     if (!tache.prix_propose) {
-      return new Response(JSON.stringify({ error: "Aucun montant convenu pour cette tâche." }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'Aucun montant défini pour cette tâche' }), { status: 400 })
     }
 
-    // 2. Calculer la répartition.
-    const montantTotal = Number(tache.prix_propose);
-    const commission = Math.round(montantTotal * COMMISSION_TAUX);
-    const montantEtudiant = montantTotal - commission;
+    const montantTotal = tache.prix_propose
+    const commission = Math.round(montantTotal * COMMISSION_TAUX)
+    const montantEtudiant = montantTotal - commission
 
-    // 3. Initier le paiement auprès de Money Fusion.
-    const mfResponse = await fetch("https://api.moneyfusion.net/paiement/initier", {
-      method: "POST",
+    // Appel réel à l'API Money Fusion — à ajuster précisément selon leur documentation
+    // (endpoint, format du body, méthode d'auth) une fois les identifiants obtenus.
+    const paiementResponse = await fetch(MONEY_FUSION_API_URL, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("MONEYFUSION_API_KEY")}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${MONEY_FUSION_API_KEY}`,
       },
       body: JSON.stringify({
-        montant: montantTotal,
-        reference: `campusgo-tache-${tacheId}`,
+        amount: montantTotal,
+        reference: `campusgo-tache-${tache_id}`,
+        callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-money-fusion`,
       }),
-    });
+    })
 
-    if (!mfResponse.ok) {
-      return new Response(JSON.stringify({ error: "Échec de l'initialisation du paiement." }), { status: 502 });
+    if (!paiementResponse.ok) {
+      const detail = await paiementResponse.text()
+      return new Response(JSON.stringify({ error: `Erreur Money Fusion : ${detail}` }), { status: 502 })
     }
-    const mfData = await mfResponse.json();
 
-    // 4. Enregistrer la transaction (statut "séquestre" en attendant confirmation de la tâche).
-    const { error: txError } = await supabaseAdmin.from("transactions").insert({
-      tache_id: tacheId,
+    const paiementData = await paiementResponse.json()
+
+    // Enregistre la transaction en attente, en attendant la confirmation par webhook
+    const { error: insertError } = await supabaseAdmin.from('transactions').insert({
+      tache_id,
       montant_total: montantTotal,
       commission,
       montant_etudiant: montantEtudiant,
-      reference_moneyfusion: mfData.reference ?? null,
-      statut: "sequestre",
-    });
+      reference_moneyfusion: paiementData.reference ?? paiementData.id,
+      statut: 'en_attente',
+    })
 
-    if (txError) {
-      return new Response(JSON.stringify({ error: "Paiement initié mais échec d'enregistrement." }), { status: 500 });
+    if (insertError) {
+      return new Response(JSON.stringify({ error: insertError.message }), { status: 500 })
     }
 
     return new Response(
-      JSON.stringify({ success: true, lien_paiement: mfData.lien_paiement, commission, montantEtudiant }),
-      { headers: { "Content-Type": "application/json" } }
-    );
+      JSON.stringify({ lien_paiement: paiementData.payment_url ?? paiementData.url }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
-  }
-});
+  const message = err instanceof Error ? err.message : 'Erreur inconnue'
+  return new Response(JSON.stringify({ error: message }), { status: 500 })
+}
+})

@@ -1,115 +1,97 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
-import { useAuth } from "../../context/AuthContext";
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ClipboardList, Plus, X } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { getTachesOuvertes } from '../../lib/tachesService'
+import FiltresCategorieTaches from '../../components/shared/FiltresCategorieTaches'
+import ListeTaches from '../../components/shared/ListeTaches'
+import FormulairePublierTache from '../../components/shared/FormulairePublierTache'
 
-/**
- * Module 4 — Marketplace de petites tâches.
- * Liste les tâches ouvertes (statut = 'ouverte'). Un étudiant peut postuler ;
- * le paiement réel (API Money Fusion) et le prélèvement de la commission de
- * 10 % sont effectués côté serveur par l'Edge Function "payer-tache"
- * (voir supabase/functions/payer-tache), jamais directement depuis le frontend.
- */
+// Rôles autorisés à publier une tâche (le personnel/admin peut aussi en avoir besoin ponctuellement)
+const ROLES_DEMANDEUR = ['particulier', 'admin']
+
 export default function TachesPage() {
-  const { user, profile } = useAuth();
-  const [taches, setTaches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ titre: "", categorie: "menage", description: "", prix_propose: "" });
+  const { role } = useAuth()
+  const [taches, setTaches] = useState([])
+  const [categorieActive, setCategorieActive] = useState(null)
+  const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState(null)
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false)
+
+  const peutPublier = ROLES_DEMANDEUR.includes(role)
+
+  async function charger(categorie) {
+    setChargement(true)
+    setErreur(null)
+    try {
+      const data = await getTachesOuvertes(categorie)
+      setTaches(data)
+    } catch (err) {
+      setErreur(err.message)
+    } finally {
+      setChargement(false)
+    }
+  }
 
   useEffect(() => {
-    chargerTaches();
-  }, []);
+    charger(categorieActive)
+  }, [categorieActive])
 
-  async function chargerTaches() {
-    const { data } = await supabase
-      .from("taches")
-      .select("*")
-      .eq("statut", "ouverte")
-      .order("created_at", { ascending: false });
-    setTaches(data || []);
-    setLoading(false);
-  }
-
-  async function publierTache(e) {
-    e.preventDefault();
-    await supabase.from("taches").insert({
-      demandeur_id: user.id,
-      titre: form.titre,
-      categorie: form.categorie,
-      description: form.description,
-      prix_propose: Number(form.prix_propose) || null,
-      statut: "ouverte",
-    });
-    setForm({ titre: "", categorie: "menage", description: "", prix_propose: "" });
-    chargerTaches();
-  }
-
-  async function postuler(tacheId) {
-    await supabase.from("candidatures").insert({
-      tache_id: tacheId,
-      etudiant_id: user.id,
-      statut: "en_discussion",
-    });
-    alert("Candidature envoyée. Utilisez la messagerie de la tâche pour vous mettre d'accord sur le prix.");
+  function handleTachePubliee() {
+    setFormulaireOuvert(false)
+    charger(categorieActive) // recharge la liste pour inclure la nouvelle tâche
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="eyebrow">Module 04</div>
-        <h1>Petites tâches rémunérées</h1>
-        <p style={{ color: "var(--color-text-muted)" }}>
-          Le paiement se fait entièrement sur la plateforme via Money Fusion.
-          CampusGo prélève automatiquement 10 % de commission à la validation de la tâche.
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-2xl font-bold text-primary">Marketplace de tâches</h1>
+        <div className="flex items-center gap-4 text-sm">
+          <Link
+            to="/taches/mes-candidatures"
+            className="flex items-center gap-1.5 text-secondary font-medium hover:underline"
+          >
+            <ClipboardList size={16} />
+            Mes candidatures
+          </Link>
+          {peutPublier && (
+            <Link
+              to="/taches/mes-publications"
+              className="flex items-center gap-1.5 text-secondary font-medium hover:underline"
+            >
+              <ClipboardList size={16} />
+              Mes publications
+            </Link>
+          )}
+        </div>
       </div>
 
-      <div className="card" style={{ padding: 20, marginBottom: 24 }}>
-        <h3>Publier une nouvelle tâche</h3>
-        <form onSubmit={publierTache}>
-          <div className="field">
-            <label>Titre</label>
-            <input required value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Aide au ménage samedi matin" />
-          </div>
-          <div className="field">
-            <label>Catégorie</label>
-            <select value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value })}>
-              <option value="menage">Ménage</option>
-              <option value="garde">Garde d'enfants</option>
-              <option value="courses">Courses</option>
-              <option value="soutien_scolaire">Soutien scolaire</option>
-              <option value="autre">Autre</option>
-            </select>
-          </div>
-          <div className="field">
-            <label>Description</label>
-            <input required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Prix proposé (FCFA, indicatif — négociable dans la discussion)</label>
-            <input type="number" value={form.prix_propose} onChange={(e) => setForm({ ...form, prix_propose: e.target.value })} />
-          </div>
-          <button className="btn btn-primary" type="submit">Publier la tâche</button>
-        </form>
-      </div>
+      {peutPublier && (
+        <div>
+          <button
+            onClick={() => setFormulaireOuvert((v) => !v)}
+            className="flex items-center gap-1.5 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-dark transition"
+          >
+            {formulaireOuvert ? <X size={16} /> : <Plus size={16} />}
+            {formulaireOuvert ? 'Annuler' : 'Publier une tâche'}
+          </button>
+          {formulaireOuvert && (
+            <div className="mt-3">
+              <FormulairePublierTache onPublished={handleTachePubliee} />
+            </div>
+          )}
+        </div>
+      )}
 
-      <h3>Tâches disponibles</h3>
-      {loading && <p>Chargement…</p>}
-      <div className="module-grid">
-        {taches.map((t) => (
-          <div key={t.id} className="card module-card">
-            <span className="tag">{t.categorie}</span>
-            <h3 style={{ margin: 0 }}>{t.titre}</h3>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-muted)" }}>{t.description}</p>
-            {t.prix_propose && <strong>{t.prix_propose} FCFA (indicatif)</strong>}
-            {profile?.role === "etudiant" && (
-              <button className="btn btn-primary" onClick={() => postuler(t.id)}>
-                Je suis disponible
-              </button>
-            )}
-          </div>
-        ))}
-        {!loading && taches.length === 0 && <p style={{ color: "var(--color-text-muted)" }}>Aucune tâche ouverte pour le moment.</p>}
-      </div>
+      <FiltresCategorieTaches categorieActive={categorieActive} onChange={setCategorieActive} />
+
+      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+
+      {chargement ? (
+        <p className="text-gray-500 text-sm">Chargement des tâches...</p>
+      ) : (
+        <ListeTaches taches={taches} />
+      )}
     </div>
-  );
+  )
 }
