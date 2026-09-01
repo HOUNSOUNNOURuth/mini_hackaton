@@ -163,7 +163,6 @@ export default function TachesPage() {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-
       if (data?.lien_paiement) window.open(data.lien_paiement, "_blank");
       else if (data?.redirect_url) window.location.href = data.redirect_url;
       else if (data?.token && data?.checkout_url) window.open(data.checkout_url, "_blank");
@@ -175,8 +174,17 @@ export default function TachesPage() {
     }
   }
 
-  const peutPostuler = (tache) =>
-    profile?.role !== "particulier" && tache.demandeur_id !== user?.id;
+  // ── CONDITION ROBUSTE pour afficher le bouton postuler ──
+  // Le bouton s'affiche SI :
+  // 1. L'utilisateur est connecté
+  // 2. Ce n'est PAS sa propre tâche
+  // 3. Son rôle n'est pas "particulier"
+  const peutPostuler = (tache) => {
+    if (!user) return false;
+    if (tache.demandeur_id === user.id) return false;
+    if (profile?.role === "particulier") return false;
+    return true;
+  };
 
   const tachesFiltrees =
     catFilter === "tous"
@@ -218,8 +226,7 @@ export default function TachesPage() {
               cursor: "pointer",
               fontWeight: 600,
               fontSize: 14,
-              background:
-                activeTab === tab.key ? "var(--color-primary)" : "transparent",
+              background: activeTab === tab.key ? "var(--color-primary)" : "transparent",
               color: activeTab === tab.key ? "#fff" : "var(--color-text)",
               transition: "all 0.2s ease",
             }}
@@ -256,10 +263,7 @@ export default function TachesPage() {
                   fontSize: 13,
                   fontWeight: 500,
                   whiteSpace: "nowrap",
-                  background:
-                    catFilter === cat.key
-                      ? "var(--color-primary)"
-                      : "var(--color-surface)",
+                  background: catFilter === cat.key ? "var(--color-primary)" : "var(--color-surface)",
                   color: catFilter === cat.key ? "#fff" : "var(--color-text)",
                   transition: "all 0.15s ease",
                 }}
@@ -327,6 +331,19 @@ export default function TachesPage() {
                     Je suis disponible
                   </button>
                 )}
+                {/* Message pour le créateur de la tâche */}
+                {user && t.demandeur_id === user.id && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "var(--color-text-muted)",
+                      fontStyle: "italic",
+                      marginTop: 4,
+                    }}
+                  >
+                    📝 C'est votre publication
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -355,62 +372,18 @@ export default function TachesPage() {
           </h2>
           <form onSubmit={publierTache}>
             <div style={{ marginBottom: 18 }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 6,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "var(--color-text)",
-                }}
-              >
-                Titre
-              </label>
-              <input
-                required
-                value={form.titre}
-                onChange={(e) => setForm({ ...form, titre: e.target.value })}
-                placeholder="Ex : Aide au ménage samedi matin"
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  borderRadius: 8,
-                  border: "1px solid var(--color-border)",
-                  fontSize: 15,
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  boxSizing: "border-box",
-                }}
-              />
+              <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 600 }}>Titre</label>
+              <input required value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Aide au ménage samedi matin" style={{
+                width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)",
+                fontSize: 15, background: "var(--color-surface)", color: "var(--color-text)", boxSizing: "border-box",
+              }} />
             </div>
-
             <div style={{ marginBottom: 18 }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 6,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "var(--color-text)",
-                }}
-              >
-                Catégorie
-              </label>
-              <select
-                value={form.categorie}
-                onChange={(e) => setForm({ ...form, categorie: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  borderRadius: 8,
-                  border: "1px solid var(--color-border)",
-                  fontSize: 15,
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  boxSizing: "border-box",
-                  cursor: "pointer",
-                }}
-              >
+              <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 600 }}>Catégorie</label>
+              <select value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value })} style={{
+                width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)",
+                fontSize: 15, background: "var(--color-surface)", color: "var(--color-text)", boxSizing: "border-box", cursor: "pointer",
+              }}>
                 <option value="menage">Ménage</option>
                 <option value="garde">Garde d'enfants</option>
                 <option value="courses">Courses</option>
@@ -418,86 +391,23 @@ export default function TachesPage() {
                 <option value="autre">Autre</option>
               </select>
             </div>
-
             <div style={{ marginBottom: 18 }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 6,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "var(--color-text)",
-                }}
-              >
-                Description
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Décrivez la tâche en détail : lieu, horaire, besoins spécifiques…"
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  borderRadius: 8,
-                  border: "1px solid var(--color-border)",
-                  fontSize: 15,
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  boxSizing: "border-box",
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                  lineHeight: 1.5,
-                }}
-              />
+              <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 600 }}>Description</label>
+              <textarea required rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Décrivez la tâche en détail : lieu, horaire, besoins spécifiques…" style={{
+                width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)",
+                fontSize: 15, background: "var(--color-surface)", color: "var(--color-text)", boxSizing: "border-box",
+                resize: "vertical", fontFamily: "inherit", lineHeight: 1.5,
+              }} />
             </div>
-
             <div style={{ marginBottom: 24 }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 6,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "var(--color-text)",
-                }}
-              >
-                Prix indicatif (FCFA)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={form.prix_propose}
-                onChange={(e) => setForm({ ...form, prix_propose: e.target.value })}
-                placeholder="Ex : 5000"
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  borderRadius: 8,
-                  border: "1px solid var(--color-border)",
-                  fontSize: 15,
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  boxSizing: "border-box",
-                }}
-              />
-              <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>
-                Ce prix est indicatif et négociable dans la messagerie.
-              </p>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 600 }}>Prix indicatif (FCFA)</label>
+              <input type="number" min="0" value={form.prix_propose} onChange={(e) => setForm({ ...form, prix_propose: e.target.value })} placeholder="Ex : 5000" style={{
+                width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid var(--color-border)",
+                fontSize: 15, background: "var(--color-surface)", color: "var(--color-text)", boxSizing: "border-box",
+              }} />
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--color-text-muted)" }}>Ce prix est indicatif et négociable dans la messagerie.</p>
             </div>
-
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={publishing}
-              style={{
-                width: "100%",
-                padding: "14px",
-                fontSize: 16,
-                fontWeight: 600,
-              }}
-            >
+            <button className="btn btn-primary" type="submit" disabled={publishing} style={{ width: "100%", padding: "14px", fontSize: 16, fontWeight: 600 }}>
               {publishing ? "Publication en cours…" : "Publier la tâche"}
             </button>
           </form>
@@ -510,183 +420,48 @@ export default function TachesPage() {
       {activeTab === "publications" && (
         <div>
           {mesPublications.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "50px 20px",
-                color: "var(--color-text-muted)",
-              }}
-            >
+            <div style={{ textAlign: "center", padding: "50px 20px", color: "var(--color-text-muted)" }}>
               <p style={{ fontSize: 16 }}>Vous n'avez publié aucune tâche pour le moment.</p>
-              <button
-                className="btn btn-primary"
-                onClick={() => setActiveTab("nouvelle")}
-                style={{ marginTop: 12 }}
-              >
-                Publier ma première tâche
-              </button>
+              <button className="btn btn-primary" onClick={() => setActiveTab("nouvelle")} style={{ marginTop: 12 }}>Publier ma première tâche</button>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {mesPublications.map((pub) => {
-                const candidats = candidaturesRecues.filter(
-                  (c) => c.tache_id === pub.id
-                );
+                const candidats = candidaturesRecues.filter((c) => c.tache_id === pub.id);
                 return (
-                  <div
-                    key={pub.id}
-                    className="card"
-                    style={{ padding: 24 }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: 8,
-                        gap: 12,
-                      }}
-                    >
-                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-                        {pub.titre}
-                      </h3>
-                      <span
-                        className="tag"
-                        style={{
-                          fontSize: 12,
-                          padding: "4px 10px",
-                          textTransform: "capitalize",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {pub.statut}
-                      </span>
+                  <div key={pub.id} className="card" style={{ padding: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 12 }}>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{pub.titre}</h3>
+                      <span className="tag" style={{ fontSize: 12, padding: "4px 10px", textTransform: "capitalize", flexShrink: 0 }}>{pub.statut}</span>
                     </div>
-                    <p
-                      style={{
-                        margin: "0 0 12px",
-                        fontSize: 14,
-                        color: "var(--color-text-muted)",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {pub.description}
-                    </p>
-                    {pub.prix_propose && (
-                      <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600 }}>
-                        {pub.prix_propose} FCFA
-                      </p>
-                    )}
+                    <p style={{ margin: "0 0 12px", fontSize: 14, color: "var(--color-text-muted)", lineHeight: 1.5 }}>{pub.description}</p>
+                    {pub.prix_propose && <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600 }}>{pub.prix_propose} FCFA</p>}
 
                     {candidats.length > 0 && (
-                      <div
-                        style={{
-                          marginTop: 16,
-                          paddingTop: 16,
-                          borderTop: "1px solid var(--color-border)",
-                        }}
-                      >
-                        <h4
-                          style={{
-                            margin: "0 0 12px",
-                            fontSize: 15,
-                            fontWeight: 600,
-                          }}
-                        >
-                          📥 Candidatures reçues ({candidats.length})
-                        </h4>
+                      <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--color-border)" }}>
+                        <h4 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600 }}>📥 Candidatures reçues ({candidats.length})</h4>
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                           {candidats.map((c) => (
-                            <div
-                              key={c.id}
-                              style={{
-                                border: "1px solid var(--color-border)",
-                                borderRadius: 10,
-                                padding: 16,
-                                background: "var(--color-surface)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  marginBottom: 10,
-                                }}
-                              >
-                                <span style={{ fontWeight: 600, fontSize: 15 }}>
-                                  {c.profiles?.nom || "Étudiant"}
-                                </span>
-                                <span
-                                  className="tag"
-                                  style={{ fontSize: 11, padding: "3px 8px" }}
-                                >
-                                  {c.statut}
-                                </span>
+                            <div key={c.id} style={{ border: "1px solid var(--color-border)", borderRadius: 10, padding: 16, background: "var(--color-surface)" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                                <span style={{ fontWeight: 600, fontSize: 15 }}>{c.profiles?.nom || "Étudiant"}</span>
+                                <span className="tag" style={{ fontSize: 11, padding: "3px 8px" }}>{c.statut}</span>
                               </div>
-
                               {candidatureOuverte === c.id && (
-                                <div
-                                  style={{
-                                    margin: "10px 0",
-                                    border: "1px solid var(--color-border)",
-                                    borderRadius: 8,
-                                    padding: 10,
-                                    background: "var(--color-background)",
-                                  }}
-                                >
-                                  <Messagerie
-                                    candidatureId={c.id}
-                                    onFermer={() => setCandidatureOuverte(null)}
-                                  />
+                                <div style={{ margin: "10px 0", border: "1px solid var(--color-border)", borderRadius: 8, padding: 10, background: "var(--color-background)" }}>
+                                  <Messagerie candidatureId={c.id} onFermer={() => setCandidatureOuverte(null)} />
                                 </div>
                               )}
-
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 8,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <button
-                                  className="btn btn-primary"
-                                  onClick={() =>
-                                    setCandidatureOuverte(
-                                      candidatureOuverte === c.id ? null : c.id
-                                    )
-                                  }
-                                  style={{ fontSize: 13, padding: "8px 14px" }}
-                                >
-                                  {candidatureOuverte === c.id
-                                    ? "🔽 Masquer"
-                                    : "💬 Discuter"}
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button className="btn btn-primary" onClick={() => setCandidatureOuverte(candidatureOuverte === c.id ? null : c.id)} style={{ fontSize: 13, padding: "8px 14px" }}>
+                                  {candidatureOuverte === c.id ? "🔽 Masquer" : "💬 Discuter"}
                                 </button>
-
                                 {c.statut === "en_discussion" && (
-                                  <button
-                                    className="btn btn-ghost"
-                                    onClick={() => accepterCandidature(c.id)}
-                                    style={{ fontSize: 13, padding: "8px 14px" }}
-                                  >
-                                    ✅ Accepter
-                                  </button>
+                                  <button className="btn btn-ghost" onClick={() => accepterCandidature(c.id)} style={{ fontSize: 13, padding: "8px 14px" }}>✅ Accepter</button>
                                 )}
-
                                 {c.statut === "acceptee" && (
-                                  <button
-                                    className="btn btn-primary"
-                                    style={{
-                                      background: "#059669",
-                                      fontSize: 13,
-                                      padding: "8px 14px",
-                                    }}
-                                    onClick={() => payerTache(c.tache_id)}
-                                    disabled={payingId === c.tache_id}
-                                  >
-                                    {payingId === c.tache_id
-                                      ? "Connexion FedaPay…"
-                                      : "💳 Payer"}
+                                  <button className="btn btn-primary" style={{ background: "#059669", fontSize: 13, padding: "8px 14px" }} onClick={() => payerTache(c.tache_id)} disabled={payingId === c.tache_id}>
+                                    {payingId === c.tache_id ? "Connexion FedaPay…" : "💳 Payer"}
                                   </button>
                                 )}
                               </div>
@@ -695,19 +470,8 @@ export default function TachesPage() {
                         </div>
                       </div>
                     )}
-
                     {candidats.length === 0 && (
-                      <p
-                        style={{
-                          fontSize: 13,
-                          color: "var(--color-text-muted)",
-                          marginTop: 12,
-                          paddingTop: 12,
-                          borderTop: "1px solid var(--color-border)",
-                        }}
-                      >
-                        Aucune candidature pour le moment.
-                      </p>
+                      <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--color-border)" }}>Aucune candidature pour le moment.</p>
                     )}
                   </div>
                 );
@@ -723,95 +487,27 @@ export default function TachesPage() {
       {activeTab === "candidatures" && (
         <div>
           {mesCandidatures.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "50px 20px",
-                color: "var(--color-text-muted)",
-              }}
-            >
-              <p style={{ fontSize: 16 }}>
-                Vous n'avez postulé à aucune tâche pour le moment.
-              </p>
-              <button
-                className="btn btn-primary"
-                onClick={() => setActiveTab("disponibles")}
-                style={{ marginTop: 12 }}
-              >
-                Voir les tâches disponibles
-              </button>
+            <div style={{ textAlign: "center", padding: "50px 20px", color: "var(--color-text-muted)" }}>
+              <p style={{ fontSize: 16 }}>Vous n'avez postulé à aucune tâche pour le moment.</p>
+              <button className="btn btn-primary" onClick={() => setActiveTab("disponibles")} style={{ marginTop: 12 }}>Voir les tâches disponibles</button>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {mesCandidatures.map((c) => (
                 <div key={c.id} className="card" style={{ padding: 24 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: 8,
-                      gap: 12,
-                    }}
-                  >
-                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-                      {c.taches?.titre}
-                    </h3>
-                    <span
-                      className="tag"
-                      style={{
-                        fontSize: 12,
-                        padding: "4px 10px",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {c.statut}
-                    </span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 12 }}>
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{c.taches?.titre}</h3>
+                    <span className="tag" style={{ fontSize: 12, padding: "4px 10px", flexShrink: 0 }}>{c.statut}</span>
                   </div>
-                  <p
-                    style={{
-                      margin: "0 0 8px",
-                      fontSize: 14,
-                      color: "var(--color-text-muted)",
-                    }}
-                  >
-                    Catégorie : {c.taches?.categorie}
-                  </p>
-                  {c.taches?.prix_propose && (
-                    <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600 }}>
-                      {c.taches.prix_propose} FCFA
-                    </p>
-                  )}
-
+                  <p style={{ margin: "0 0 8px", fontSize: 14, color: "var(--color-text-muted)" }}>Catégorie : {c.taches?.categorie}</p>
+                  {c.taches?.prix_propose && <p style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600 }}>{c.taches.prix_propose} FCFA</p>}
                   {candidatureOuverte === c.id && (
-                    <div
-                      style={{
-                        margin: "12px 0",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: 8,
-                        padding: 10,
-                        background: "var(--color-background)",
-                      }}
-                    >
-                      <Messagerie
-                        candidatureId={c.id}
-                        onFermer={() => setCandidatureOuverte(null)}
-                      />
+                    <div style={{ margin: "12px 0", border: "1px solid var(--color-border)", borderRadius: 8, padding: 10, background: "var(--color-background)" }}>
+                      <Messagerie candidatureId={c.id} onFermer={() => setCandidatureOuverte(null)} />
                     </div>
                   )}
-
-                  <button
-                    className="btn btn-primary"
-                    onClick={() =>
-                      setCandidatureOuverte(
-                        candidatureOuverte === c.id ? null : c.id
-                      )
-                    }
-                    style={{ fontSize: 14, padding: "10px 18px" }}
-                  >
-                    {candidatureOuverte === c.id
-                      ? "🔽 Masquer la discussion"
-                      : "💬 Ouvrir la discussion"}
+                  <button className="btn btn-primary" onClick={() => setCandidatureOuverte(candidatureOuverte === c.id ? null : c.id)} style={{ fontSize: 14, padding: "10px 18px" }}>
+                    {candidatureOuverte === c.id ? "🔽 Masquer la discussion" : "💬 Ouvrir la discussion"}
                   </button>
                 </div>
               ))}
