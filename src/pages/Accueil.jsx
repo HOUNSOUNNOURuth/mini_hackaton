@@ -61,8 +61,7 @@ export default function Accueil() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-           // AVANT (si tu avais ça)
-           onClick={() => navigate('/dashboard')}
+          
 
            // APRÈS (redirection vers login si pas connecté, sinon dashboard)
            onClick={() => navigate('/dashboard')}
