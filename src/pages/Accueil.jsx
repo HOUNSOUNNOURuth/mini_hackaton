@@ -61,15 +61,11 @@ export default function Accueil() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-          
-
-           // APRÈS (redirection vers login si pas connecté, sinon dashboard)
-           onClick={() => navigate('/dashboard')}
-            className="group flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-primary/30"
-          >
-            Entrer sur CampusGo
-            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-          </button>
+         onClick={() => navigate('/dashboard')}  // ← On garde UN SEUL
+         className="group flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-primary/30"
+>
+         Mon bouton
+        </button>
         </div>
 
         <div className="mt-12 flex justify-center gap-8 text-gray-500 text-sm">
